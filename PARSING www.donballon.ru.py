@@ -1,0 +1,136 @@
+import requests
+from bs4 import BeautifulSoup
+from time import sleep
+import csv
+import os
+headers = {
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+    'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Cache-Control': 'max-age=0',
+    'Connection': 'keep-alive',
+
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'none',
+    'Sec-Fetch-User': '?1',
+    'Upgrade-Insecure-Requests': '1',
+    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
+    'sec-ch-ua': '"Google Chrome";v="117", "Not;A=Brand";v="8", "Chromium";v="117"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Linux"',
+}
+page_count = []
+sps_page = []
+url_list = []
+def get_page(url):
+    r = requests.get(url=url, headers=headers)
+    soup = BeautifulSoup(r.text, "lxml")
+    get_url = soup.find_all("a", class_="link link--color--black link--weight--bold menu__link menu__text")
+
+
+
+    for url in get_url:
+        url = "https://www.donballon.ru" + url.get("href")
+        url_list.append(url)
+        print("Идет сбор данных,,,")
+        print(url_list)
+        count = 3
+        sps_page = []
+        sps_links = []
+        Flag = True
+        while Flag:
+
+            urls = url + f"?ipp=30&PAGEN_1={count}"
+            #print(urls)
+            r = requests.get(url=urls, headers=headers)
+            soup = BeautifulSoup(r.text, "lxml")
+            count_page = soup.find_all("a", class_="link paginator__link link--color--black")
+
+            for page in count_page:
+                if page.text not in sps_page:
+                    sps_page.append(page.text)
+                    # sleep(1)
+                else:
+                    continue
+
+            count += 2
+            if count > len(sps_page) + 3:
+                Flag = False
+        page_count.append(len(sps_page))
+        print(page_count)
+
+def get_data(page_count, url_list ):
+    # for link in (url_list):
+    #     #count2 = 0
+    #     with open(f'data_{link.split("/")[-2]}.csv', 'w', encoding='utf-8-sig', newline='') as file:
+    #         writer = csv.writer(file, delimiter=';')
+    #         writer.writerow((
+    #             "Название товара",
+    #             "Цена",
+    #             "Цена за шт."))
+    count2 = 0
+    for i in (page_count):
+        url = url_list[count2]
+        with open(f'data_{url.split("/")[-2]}.csv', 'w', encoding='utf-8-sig', newline='') as file:
+            writer = csv.writer(file, delimiter=';')
+            writer.writerow((
+                "Название товара",
+                "Цена",
+                "Цена за шт."))
+
+        if count2 > len(url_list):
+            break
+        else:
+            for count in range(1,i + 1):
+                urls = url + f"?ipp=30&PAGEN_1={count}"
+                print(urls)
+                r = requests.get(url=urls, headers=headers)
+
+                if not os.path.exists("data"):
+                    os.mkdir("data")
+
+                with open("data.html", "w") as file:
+                    file.write(r.text)
+
+                with open("data.html") as file:
+                    src = file.read()
+                soup = BeautifulSoup(src, "lxml")
+                names = soup.find_all("div", class_="product-card__body")
+                for name in names:
+                    if name.find("div", class_="add-to-cart"):
+
+                        try:
+                            product_name = name.find("span", class_="link__text").text.strip().replace(",", " ")
+                            print(product_name)
+                        except:
+                            print("Нет данных")
+                        try:
+                            price = name.find("div", class_="product-card__price-value").text.replace(",", " ")
+                            print(price)
+                        except:
+                            price = "Нет данных"
+                        try:
+                            price_for_one = name.find("div", class_="product-card__price-quantity").text.replace(",", " ")
+                            print(price_for_one)
+                        except:
+                            price_for_one = "Нет данных"
+
+                        with open(f'data_{url.split("/")[-2]}.csv', 'a', encoding='utf-8-sig', newline='') as file:
+                            writer = csv.writer(file, delimiter=';')
+                            writer.writerow((
+                                product_name,
+                                price,
+                                price_for_one))
+                    else:
+                        continue
+
+        count2 += 1
+
+
+def main():
+    get_page("https://www.donballon.ru")
+    get_data(page_count, url_list)
+
+
+if __name__ == "__main__":
+    main()
