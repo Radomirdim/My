@@ -60,14 +60,7 @@ def get_page(url):
         print(page_count)
 
 def get_data(page_count, url_list ):
-    # for link in (url_list):
-    #     #count2 = 0
-    #     with open(f'data_{link.split("/")[-2]}.csv', 'w', encoding='utf-8-sig', newline='') as file:
-    #         writer = csv.writer(file, delimiter=';')
-    #         writer.writerow((
-    #             "Название товара",
-    #             "Цена",
-    #             "Цена за шт."))
+    
     count2 = 0
     for i in (page_count):
         url = url_list[count2]
